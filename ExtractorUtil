@@ -1,0 +1,160 @@
+# -*- coding: utf-8 -*-
+"""
+    中文网站网页正文抽取算法 QQ 674451971
+"""
+
+import re
+import chardet
+import requests
+from pyquery import PyQuery as pq
+
+class ExtractorUtil:
+    __text = []
+    __index = []
+
+    # blocksWidth 行块，几行为一个行块
+    # threshold，这个行块的字符数目 可以调整，不适合短文本提取
+    def __init__(self, threshold=160, blocksWidth=4):
+        self.__blocksWidth = blocksWidth
+        self.__threshold = threshold
+        # 穷举正文规则
+        self.__rules = self.__rule.split(',')
+
+
+    # ------------------穷举正文规则提取 常见ID和class---------------------------------
+    __rule = '.articleCon,.article-text,.articleDetails_leftA_01,.g-articl-text,.js-article,#art_body,#artical_real,.article-detail-inner,.node-article-content,.articleContent,#UCAP-CONTENT,#art-content,.artical-content,.art-main,#article-content,#articleBody,.article_content2,.artic2,.artibody,.artText,#article_content,.main-left-article,.article_con,.artcon,.sm-article-content,.art,.cms-article-text,.article_detail_text,.articleBody,.art_txt,#articlecontent,.m-con-article,.articleCont,.part,.news-art-cont,.article_bd,.articleMain,#artibody,#div-article-content,.art_context,.article-detail,#mod_article,.article-body div,.article-cont,.artConmain,#articleBox,#artText,.article-mainbody,.article-daily,.article-detail-cont,.article_content,.article-txt,.articleBox,.article-post-content,.c-article-content,article,.article_body,.article_cont,.artcont,.artCon,#articleText,.article_content_wrap,#artical,.article-detail-content,.article-content,.article,#fm_article,.article-bd,.articleMatter,.z_article_con,.art_main,.wp-art-content,.article-detail-bd,.article_contente,#container-article,.artinfo,.artTxt,.arttext,#articontent,.articledesc,.artile-bodycont,.zarticle_width,.yjl_fx168_article_zhengwen,#art_con,.J-articleContent,.art_content,.article-con,#article_text,#articleC,.detail-article,.artical_c,.article_con1_1,.art_text,.main_article,.article p,.articalCont,#arti_bd,.n_articleContainer,.article-main,.data-article,.lph-article-comView,.article-summary,.arti_detail_int,.article_left_main,.article_detail,#gb_article_body,.article_main,.artical,#artContent,.m-article,.body_art,.artDet,#article,.gb-final-mod-article,.g-article,.art-cont,.article-contents,#articleContent,#i_art_main content,.con-news-art,.article-content-wrap,.news-article-text,.article-body,.art-content,.article ,.art_con,.article-section,.art-body,.news-art,#contentarea,#id_content,#J_content,#body,#layer216,#ContentBody,#infoContent,#p8_content_show,#diV_coNntent,#news_text,#list_main,#zwnr,#newscontent div,#FineDining,#con_weibo,#neirong-box,#post,#showcontent,#bs_content,#content2,#c,#Arti,#sourceTxt,#ncontent,#fieldbody,#BodyLabel,#zoom p,#ReportIDtext,#founder,#wz,#text,#yc_con_txt,#dp_nr,#printArea,#container_txt,#tmpDirectory,#con,#showneirong,#news_body,#dvcontent,#newsContent,#main_content,#DivNewsContent,#essay,#DetCon,#mainNewsContent,#Cont,#table145 tbody tr td,#TRS_AUTOADD,#mycontent,#contenttowb,#contentMain,#zh_content,#bo,#content-text,#div_CurrentPage,#mainCon,#docContent,#myFont,#cotent_idd,#list_left p,#mcontent,#resizeIMG,#tdcontent,#chz_newscontent,#ajax_text,#chan_newsDetail,#ArticleCnt,#endtext,#zoom,#kzzt,#content_body p,#maincontent,#cont1,#w_content,#Cnt-Main-Article-ordos,#newsCon,#ajax_all_page,#nry_990_4,#NewsContent,#itemContent,#icontent,#news-content,#rwb_zw,#news_cont,#logincontent,#nr p,#the_content,#Content,#__newsBody__,#dochtml,#divcontent,#p-detail,#contentText,#tbcontent,#ArticleContent,#list_news ul,#detailsleft014,#main,#newsintro,#pageTxt,#cont,#newsbody,#content_main,#content1,#Cnt-Main-Article-QQ p,#Ma_Content,#qmt_content_div,#pageContent,#contents,#neirong,#div_content,#txt_body,#post1,#main-content,#pzoom,#dvContent,#content,#contentOutBlock,#contact_con,#zw,#_content,#contentDiv,#PrintTxt,#fontZoom,#endText,#MyContent,#Cnt-Main-Article-hdzc,#zhw,#abody,#endArea_Detail,#contentNews,#jq22,#txtedit,#xilucontentid,#dcontent,#sc-container,#contentMain div p,#zhengwen,#arctext,#news_content_box,#newscontent,#news,#pc1,#main_text,#scol_txt,#Zoom,#content_text,#mainContent,#remark_view,#cms_content_div,#read_tpc,#recwContent,#mainCnt,#contentContainer,#new_message_id,#topic_content,#detailContent,#content_view_content_body,#fontzoom,#area-player,#ctrlfscont,#post_description,#icontent table tbody tr td,#main-body,#main-con,#postContent,#Article,#contentword,#news_subject,#textbody,#contentFont,#Cnt-Main-Article-QQ,#newstext,#main_ContentPlaceHolder1_pnlContent,#tts-text,#text1,#AContent,#txt,#content-body,#Cnt-Main-Article,#textContent,#pageTxt p,#nei,#new,#news_content,.contentMain,.news_info,.con_t,.layer83,.xyn-text,.zcnrynr,.content-main ,.display_wen,.detail_content,.mcontent,.news-c,.m02-content,.info_con_text,.zleftf,.m-wz-box,.NewsContent,.note,.entrycontent:eq(0),.WordSection1,.topmain,.concon,.lt_edit,.heaSummary,.det_content,.conter,.big16list,.MainL_bd,.f14,.ctn,.li_text div,.g-content-c,.td-post-content,.display_content,.icontent,.page_wznr,.del-bottom,.program_bd,.ad_content,.c_tcon,.content_lt,.news-detail-txt,.Article,.node_body,.zoom,.arc-body,.entry p,.wenZi_02,.newsl,.content-item,.content_nav,.newsbody14,.cnt_body,.maintext,.mt20,.newsContent,.newsArticle,.news_dcon,.ccbox,.single-main,.amaina,.contents,.neirong,.bd,.news_con,.news-text,.tpnei1,.contdiv,.detail_box,.news_main,.document,.post-con,.NewsArtDetail,.detail_word_content,.textCon,.bor2,.news_link,.nd-c,.content div,.pix14h2_lh30c,.main_l_cont,.new15MainContents,.instapaper_body,.nt_cont_txt,.arMain,.news_info_con,.custom,.full_xx,.newsCont,.conttxt,.document_con,.cont-content,.left_body_center,.info_con,.fs-small,.detailCont,.news_txt,._img_resize,.a-container,.ya-xl-con,.c_page,.fontSizeSmall,.group,.y3_nr,.DeInfoDetail,.east5_left1_3,.zw,.content,.main_left,.tjzx,.txt-wrap p,.content-wrap,.content_main,.textbox,.NewContent,.showcon,.news_description,.content_wz,.view-intro,.inner,.c333,.Custom_UnionStyle,.ccontent,.a-style-bigimg,.txt_body,.subject-content,.the_body,.zicont div div p,.c_l_content,.body-content,.dis_contact,.contentarea,.con_text,.nr_k,.nei,.news_content_content,.sec_l5,.content-txt,.TRS_Editor,.wy_news_content,.new_content,.nr,.describe,.field_body,.post-content p,.content table tbody tr td,.v_detail_content,.neirong_menu,.contentText,.show_content,.xwenm,.end-text,.infoMain,.con_l_inner,.lmjs_com1 p,.content-body,.a_p,.wany-ex-details-txt,.con,.texttit_m1,.act-content,.news-details-bd,.zg_show_word,.s_content,.newContentInfo,.text-desc,.bd_Article,.font10,.yc_con_txt,.awz_zhong,.detail,.zhuneirong,.Content,.wyt-post-content,.detailContent,.news,.contTxt,.news_content_text,.text_info,.ml_xq,.Mtext,.Detail_ConWarp content,.nr_zihao,.text_cot,.wz_text,.auto_wz_40,.news_cont,.arc ,.newstext,.cnt_bd,.newsDetail-con,.information-content,.the_content,.sec-content,.arcbox,.newscont,.txt,.font14px,.page_s_news,.union,.story_box,.entry01,.tpk_text,.intro,.content.dl_text,.newsbox,.Ranking_content_box,.wenzhang,.detailconcon,.qzshow_nr,.newsLeft,.content0,.detailc,.detailTxt,.arcContent,.main-content p,.conterinfo,.entry,.paragraph,.lbyones,.Newsfont,.newsContent_Detailed,.main_content,.topicTxt,.cp_newsconmes,.wzyA_con,section,.newscon,.news_page,.contentA,.news-detail-content p,.tentl,.box-con,.contentp1,.news_inter_area,.newsinfo,.content-zsy,.news_content,.g_p_content,.znews3_txt,.cmsDiv,.c_zw p,.xw_daodu_detail,.conten,.detail_p p,.view-content,.contxt,.atc-content,.mycontent,.xcontent,.cpnn-con-zhenwen,.n_show_nr,.details,.news-body,.wen14hei,.zx_wzzy p,.Detail_Content,.qu_ocn,.sInfo,.xwzx_wname02,.main_left_con,.news_memo,.kzimg,.content_pmarginb,.m_left,.text,.y_text,.m-bct,.zw_main3,.WaresDetail,.zhengwen,.bjq,.zx_wzp,.cl_text,.ardetail,.zheng,.desc_main,.bofas,.gameTextContent,.sigpage,.contentbox,.nc_left_03,.content_left_txt,.ldContent,.aLc_ac,.status-content,.db-detail,.f16,.txt_l,.contentdiv,.show-con,.nei_content,.h22,.ctxx,.content_text,.Articletit,.NewsArtDe,.entry-content,.text_body,.wenzi,.appgame-primary p,.message,.p14 table tbody tr p,.arcont,.entry-inner,.ina_news_content,.font16,.detailTxtCon,.hl_body,.content_detail,.newsMainBox,.zxfzcontent,.word,.container_text,.jklist_zcont,.left523,.jrstqPar,.post-content,.jdw_page_cont,.newscontent,.BSHARE_POP,.wd-intro,.main_box,.content_zw,.xd-nr,.page_maincontent,.content ,.main_con,.rich-content,.thetext,.newsbody,.txt-wrap,.mainContent,.content-body div,.center_2_left_top_zw_center,.border-box,.w670,.content_01,.pct,.contentpage,.detail-content,.wzCon,.textBody,.cont_body,.reviews_text,.ov p,.hot_zidingyi,.wz,.content-detail,.fleft,.main-text,.atc_main,.contP,.cl,.news-editbox,.cont_text,.wkBody,.text3,.detail_txt,.mt10,.normal105v,.news-detail p,.Mid2L_con,.txt407,.con-detail,.show,.c_content_text,.fetch-view,.news_text,.cbody,.text7,.ArticleContent,.A_contxt,.wz_contents1,.news_show_nr,.cento,.left_zw,.box_text,.sxz-editor,.newsview_content,.Columntextall,.content_box,.fbvcc,.gy_show_con,.view_body,.maincontent,.p3,.bgWhite,.neiRongArea,.fzmpa,.ReplyContent,.detailcontent,.news_con_text,.content_nr,.text p,.news-detail,.z14hei,.content-imfomation,.detailexe,.cont,.cont_wed,.news-t4,.left1_d,.con p,.wzzt,.main_Article,.acla_text_left_main,.ny_ny_box,.con_main,.contentsize,.ync-content,.list_mm,.wb_nr,.textblock,.contenttext,.richContent,.wen,.aoyaw5_left1_3,.gr_info,.endtext,.duanluo,.detail_con,.content_text_main,.td14:eq(0),.content01,.pic_content,.this_con p,.content-bd,.textmain,.content-content,.mb20,.divContent,.new_contetn,.ina_content,.mian_contert,.x_main,.cnt-main,.content_info,.post-txt,.news_content_view,.STYLE14,.home_content,.text_box,.txtContent,.detials,.title_newcs,.read_news_content1,.content_word,.mt_20,.content-left-top,.baohanP,.cont-detail,.listb,.showArticle,.Text,.RL_details_content,.content table tbody tr:eq(1) td,.Newstextall,.newsBd,.detailbg,.endText,.newsDetails,.zxmainlcont,.detailItem,.content_body,.content-main,.subleft,.zwnr p,.fs14,.pagecontent,.contentinfo,.content_txt,.body,.col-xs-12,.ctbox,.info,.y-xin-cot,.newsCon,.conzw,.news-text-con,.ceo,.bwdd_yy,.end-text-c,.enlarge-font,.col_333,.newsDetail,.details-text,.Cont,.news_xiang_con,.news-content,.twzw,.poDtl__cnt,.channle-content,.pLR20,.in-newdt-content,.news-details-con,.main_news,.con_left,.zhengwen-main';
+
+    def parseContent(self, html):
+        doc = pq(html)
+        for s in self.__rules:
+            text = doc(s).text()
+            if len(text) > 200:  # 如果长度大于200则认为获取到了正文
+                return text
+        # 没有获取到
+        return None
+
+
+
+
+    # ------------------利用算法获取，参考：https://github.com/chrislinan/cx-extractor-python---------------------------------
+    # 从HTML中直接提取正文内容 这个是在CSS选择失效的情况下使用。
+    def getContent(self, html):
+        return self.getText(self.filter_tags(html));
+
+
+    # 从文本里面提取出正文来，没有则是 None
+    def getText(self, content):
+        if self.__text:
+            self.__text = []
+        lines = content.split('\n')
+        for i in range(len(lines)):
+            if lines[i] == ' ' or lines[i] == '\n':
+                lines[i] = ''
+        self.__index.clear()
+        for i in range(0, len(lines) - self.__blocksWidth):
+            wordsNum = 0
+            for j in range(i, i + self.__blocksWidth):
+                lines[j] = lines[j].replace("\\s", "")
+                wordsNum += len(lines[j])
+            self.__index.append(wordsNum)
+        start = -1
+        end = -1
+        boolstart = False
+        boolend = False
+        if len(self.__index) < 3:
+            print('This page has no content to extract')
+            return None
+        for i in range(len(self.__index) - 3):
+            if(self.__index[i] > self.__threshold and (not boolstart)):
+                if (self.__index[i + 1] != 0 or self.__index[i + 2] != 0 or self.__index[i + 3] != 0):
+                    boolstart = True
+                    start = i
+                    continue
+            if (boolstart):
+                if (self.__index[i] == 0 or self.__index[i + 1] == 0):
+                    end = i
+                    boolend = True
+            tmp = []
+            if(boolend):
+                for ii in range(start, end + 1):
+                    if(len(lines[ii]) < 5):
+                        continue
+                    tmp.append(lines[ii] + "\n")
+                str = "".join(list(tmp))
+                if ("Copyright" in str or "版权所有" in str):
+                    continue
+                self.__text.append(str)
+                boolstart = boolend = False
+        result = "".join(list(self.__text))
+        if result == '':
+            print('This page has no content to extract')
+            return None
+        else:
+            return result
+
+    # HTML过滤掉所有的标签标志，一行行的纯文本
+    def filter_tags(self, htmlstr):
+        re_doctype = re.compile('<![DOCTYPE|doctype].*>')
+        re_nav = re.compile('<nav.+</nav>')
+        re_cdata = re.compile('//<!\[CDATA\[.*//\]\]>', re.DOTALL)
+        re_script = re.compile(
+            '<\s*script[^>]*>.*?<\s*/\s*script\s*>', re.DOTALL | re.I)
+        re_style = re.compile(
+            '<\s*style[^>]*>.*?<\s*/\s*style\s*>', re.DOTALL | re.I)
+        re_textarea = re.compile(
+            '<\s*textarea[^>]*>.*?<\s*/\s*textarea\s*>', re.DOTALL | re.I)
+        re_br = re.compile('<br\s*?/?>')
+        re_h = re.compile('</?\w+.*?>', re.DOTALL)
+        re_comment = re.compile('<!--.*?-->', re.DOTALL)
+        re_space = re.compile(' +')
+        s = re_cdata.sub('', htmlstr)
+        s = re_doctype.sub('',s)
+        s = re_nav.sub('', s)
+        s = re_script.sub('', s)
+        s = re_style.sub('', s)
+        s = re_textarea.sub('', s)
+        s = re_br.sub('', s)
+        s = re_h.sub('', s)
+        s = re_comment.sub('', s)
+        s = re.sub('\\t', '', s)
+        s = re_space.sub(' ', s)
+        s = self.replaceCharEntity(s)
+        return s
+
+    # 替换一些特殊字符 私有
+    def replaceCharEntity(self, htmlstr):
+        CHAR_ENTITIES = {'nbsp': ' ', '160': ' ',
+                         'lt': '<', '60': '<',
+                         'gt': '>', '62': '>',
+                         'amp': '&', '38': '&',
+                         'quot': '"', '34': '"', }
+        re_charEntity = re.compile(r'&#?(?P<name>\w+);')
+        sz = re_charEntity.search(htmlstr)
+        while sz:
+            entity = sz.group()
+            key = sz.group('name')
+            try:
+                htmlstr = re_charEntity.sub(CHAR_ENTITIES[key], htmlstr, 1)
+                sz = re_charEntity.search(htmlstr)
+            except KeyError:
+                htmlstr = re_charEntity.sub('', htmlstr, 1)
+                sz = re_charEntity.search(htmlstr)
+        return htmlstr
+
+    # 读取HTML文档
+    def readHtml(self, path, coding):
+        page = open(path, encoding=coding)
+        lines = page.readlines()
+        s = ''
+        for line in lines:
+            s += line
+        page.close()
+        return s
+
+    # 下载HTML
+    def downHtml(self, url):
+        resp = requests.get(url)
+        encode_info = chardet.detect(resp.content)
+        resp.encoding = encode_info['encoding']
+        return resp.text
+
